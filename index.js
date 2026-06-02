@@ -44,10 +44,15 @@ function saveState(data) {
 async function aiReply(text) {
   try {
     const model = genAI.getGenerativeModel({
-      model: "models/gemini-1.5-flash"
+      model: "models/gemini-1.5-flash",
     });
 
-    const result = await model.generateContent(text);
+    const result = await model.generateContent([
+      {
+        text: `${SYSTEM_PROMPT}\n\nUser: ${text}`
+      }
+    ]);
+
     return result.response.text();
 
   } catch (err) {
@@ -55,7 +60,6 @@ async function aiReply(text) {
     return "I'm facing some issues right now. Try again shortly.";
   }
 }
-
 // -------------------- WHATSAPP SENDER --------------------
 async function sendWhatsApp(to, text) {
   try {
