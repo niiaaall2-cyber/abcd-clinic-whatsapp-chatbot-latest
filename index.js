@@ -47,10 +47,14 @@ async function aiReply(text) {
       model: "gemini-pro",
     });
 
-    const result = await model.generateContent(text);
-    const response = result.response.text();
+    const result = await model.generateContent([
+      {
+        role: "user",
+        parts: [{ text }]
+      }
+    ]);
 
-    return response;
+    return result.response.text();
 
   } catch (err) {
     console.error("GEMINI ERROR FULL:", err);
