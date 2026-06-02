@@ -45,11 +45,17 @@ async function aiReply(text) {
   try {
     const model = genAI.getGenerativeModel({
       model: "gemini-pro",
-      systemInstruction: SYSTEM_PROMPT,
     });
 
-    const result = await model.generateContent(text);
+    const result = await model.generateContent([
+      {
+        role: "user",
+        parts: [{ text }],
+      },
+    ]);
+
     return result.response.text();
+
   } catch (err) {
     console.error("GEMINI ERROR FULL:", err);
     return "I'm facing some issues right now. Try again shortly.";
