@@ -1,4 +1,8 @@
 require("dotenv").config();
+
+const express = require("express");
+const axios = require("axios");
+const fs = require("fs");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 if (!process.env.GEMINI_API_KEY) {
@@ -6,10 +10,6 @@ if (!process.env.GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-const express = require("express");
-const axios = require("axios");
-const fs = require("fs");
 
 const app = express();
 app.use(express.json());
@@ -45,18 +45,11 @@ async function aiReply(text) {
   try {
     const model = genAI.getGenerativeModel({
       model: "gemini-pro",
+      systemInstruction: SYSTEM_PROMPT,
     });
 
-    const result = await model.generateContent({
-      contents: [
-        {
-          parts: [
-            { text }
-          ]
-        }
-      ]
-    });
-
+    // ✅ THIS IS THE KEY FIX (string only)
+    const result = await model.generateContent(String(text));
     return result.response.text();
 
   } catch (err) {
@@ -64,6 +57,7 @@ async function aiReply(text) {
     return "I'm facing some issues right now. Try again shortly.";
   }
 }
+
 // -------------------- WHATSAPP SENDER --------------------
 async function sendWhatsApp(to, text) {
   try {
@@ -77,7 +71,7 @@ async function sendWhatsApp(to, text) {
             payload: {
               type: "text",
               text: {
-                body: text,
+                body: String(text),
               },
             },
           },
@@ -94,6 +88,7 @@ async function sendWhatsApp(to, text) {
     console.error("SEND ERROR:", err.response?.data || err.message);
   }
 }
+
 // -------------------- WEBHOOK --------------------
 app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
