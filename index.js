@@ -40,7 +40,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 async function aiReply(text) {
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-pro",
       systemInstruction: SYSTEM_PROMPT,
     });
 
@@ -62,7 +62,12 @@ async function sendWhatsApp(to, text) {
         messages: [
           {
             kind: "raw",
-            content: text,
+            payload: {
+              type: "text",
+              text: {
+                body: text,
+              },
+            },
           },
         ],
       },
@@ -77,7 +82,6 @@ async function sendWhatsApp(to, text) {
     console.error("SEND ERROR:", err.response?.data || err.message);
   }
 }
-
 // -------------------- WEBHOOK --------------------
 app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
