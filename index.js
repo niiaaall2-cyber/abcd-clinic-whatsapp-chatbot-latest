@@ -44,12 +44,10 @@ function saveState(data) {
 async function aiReply(text) {
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: SYSTEM_PROMPT,
+      model: "models/gemini-1.5-flash"
     });
 
-    // ✅ THIS IS THE KEY FIX (string only)
-    const result = await model.generateContent(String(text));
+    const result = await model.generateContent(text);
     return result.response.text();
 
   } catch (err) {
