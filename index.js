@@ -47,12 +47,13 @@ async function aiReply(text) {
       model: "gemini-pro",
     });
 
-    const result = await model.generateContent([
-      {
-        role: "user",
-        parts: [{ text }],
-      },
-    ]);
+    const result = await model.generateContent({
+      contents: [
+        {
+          parts: [{ text }],
+        },
+      ],
+    });
 
     return result.response.text();
 
@@ -61,7 +62,6 @@ async function aiReply(text) {
     return "I'm facing some issues right now. Try again shortly.";
   }
 }
-
 // -------------------- WHATSAPP SENDER --------------------
 async function sendWhatsApp(to, text) {
   try {
