@@ -34,9 +34,6 @@ function saveState(data) {
 }
 
 // -------------------- GEMINI --------------------
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
 async function aiReply(text) {
   try {
     const model = genAI.getGenerativeModel({
@@ -44,10 +41,10 @@ async function aiReply(text) {
       systemInstruction: SYSTEM_PROMPT,
     });
 
-    const result = await model.generateContent(String(text || ""));
+    const result = await model.generateContent(text);
     return result.response.text();
   } catch (err) {
-    console.error("GEMINI ERROR:", err.message);
+    console.error("GEMINI ERROR FULL:", err);
     return "I'm facing some issues right now. Try again shortly.";
   }
 }
