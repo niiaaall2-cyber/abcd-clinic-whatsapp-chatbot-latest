@@ -44,7 +44,7 @@ function saveState(data) {
 async function aiReply(text) {
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-pro",
+      model: "gemini-1.5-flash",
       systemInstruction: SYSTEM_PROMPT,
     });
 
