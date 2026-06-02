@@ -44,7 +44,7 @@ async function aiReply(text) {
       systemInstruction: SYSTEM_PROMPT,
     });
 
-    const result = await model.generateContent(text);
+    const result = await model.generateContent(String(text || ""));
     return result.response.text();
   } catch (err) {
     console.error("GEMINI ERROR:", err.message);
@@ -59,7 +59,12 @@ async function sendWhatsApp(to, text) {
       process.env.CHATMITRA_SEND_URL,
       {
         recipient_mobile_number: to,
-        messages: [{ kind: "text", text }],
+        messages: [
+          {
+            kind: "raw",
+            content: text,
+          },
+        ],
       },
       {
         headers: {
@@ -75,7 +80,7 @@ async function sendWhatsApp(to, text) {
 
 // -------------------- WEBHOOK --------------------
 app.post("/webhook", async (req, res) => {
-  res.sendStatus(200); // IMPORTANT: respond fast to prevent retries
+  res.sendStatus(200);
 
   try {
     const body = req.body;
@@ -151,7 +156,7 @@ async function handleBooking(from, msg, state, states) {
 
       await sendWhatsApp(
         from,
-        `Done 👍 Your request is received. Our team will confirm shortly.`
+        "Done 👍 Your request is received. Our team will confirm shortly."
       );
 
       delete states[from];
