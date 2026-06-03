@@ -3,13 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const fs = require("fs");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-if (!process.env.GEMINI_API_KEY) {
-  console.error("❌ GEMINI_API_KEY missing");
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const Groq = require("groq-sdk");
 
 const app = express();
 app.use(express.json());
@@ -21,45 +15,46 @@ const STATE_FILE = "./bookingState.json";
 // -------------------- SYSTEM PROMPT --------------------
 const SYSTEM_PROMPT = fs.readFileSync("./system_prompt.txt", "utf8");
 
+// -------------------- GROQ --------------------
+if (!process.env.GROQ_API_KEY) {
+  console.error("❌ GROQ_API_KEY missing");
+}
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
+async function aiReply(userText) {
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userText },
+      ],
+    });
+
+    return completion.choices[0]?.message?.content || "Sorry, try again.";
+  } catch (err) {
+    console.error("GROQ ERROR:", err);
+    return "I'm facing some issues right now. Try again shortly.";
+  }
+}
+
 // -------------------- SAFE STATE HANDLING --------------------
 function loadState() {
   try {
     if (!fs.existsSync(STATE_FILE)) return {};
     return JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
-  } catch (e) {
-    console.error("STATE LOAD ERROR:", e);
+  } catch {
     return {};
   }
 }
 
 function saveState(data) {
-  try {
-    fs.writeFileSync(STATE_FILE, JSON.stringify(data, null, 2));
-  } catch (e) {
-    console.error("STATE SAVE ERROR:", e);
-  }
+  fs.writeFileSync(STATE_FILE, JSON.stringify(data, null, 2));
 }
 
-// -------------------- GEMINI --------------------
-async function aiReply(text) {
-  try {
-    const model = genAI.getGenerativeModel({
-      model: "models/gemini-1.5-flash",
-    });
-
-    const result = await model.generateContent([
-      {
-        text: `${SYSTEM_PROMPT}\n\nUser: ${text}`
-      }
-    ]);
-
-    return result.response.text();
-
-  } catch (err) {
-    console.error("GEMINI ERROR FULL:", err);
-    return "I'm facing some issues right now. Try again shortly.";
-  }
-}
 // -------------------- WHATSAPP SENDER --------------------
 async function sendWhatsApp(to, text) {
   try {
@@ -72,9 +67,7 @@ async function sendWhatsApp(to, text) {
             kind: "raw",
             payload: {
               type: "text",
-              text: {
-                body: String(text),
-              },
+              text: { body: text },
             },
           },
         ],
@@ -95,47 +88,38 @@ async function sendWhatsApp(to, text) {
 app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 
-  try {
-    const body = req.body;
+  const body = req.body;
 
-    const from =
-      body?.from ||
-      body?.data?.from ||
-      body?.messages?.[0]?.from;
+  const from =
+    body?.from ||
+    body?.data?.from ||
+    body?.messages?.[0]?.from;
 
-    const message =
-      body?.message ||
-      body?.data?.message ||
-      body?.messages?.[0]?.text?.body ||
-      body?.messages?.[0]?.body;
+  const message =
+    body?.message ||
+    body?.data?.message ||
+    body?.messages?.[0]?.text?.body ||
+    body?.messages?.[0]?.body;
 
-    if (!from || !message) return;
+  if (!from || !message) return;
 
-    let states = loadState();
-    let userState = states[from];
+  let states = loadState();
+  let userState = states[from];
 
-    // ---------------- BOOKING FLOW ----------------
-    if (userState) {
-      await handleBooking(from, message, userState, states);
-      return;
-    }
-
-    // ---------------- TRIGGER BOOKING ----------------
-    if (/book|appointment|schedule|reserve/i.test(message)) {
-      states[from] = { step: "name", data: {} };
-      saveState(states);
-
-      await sendWhatsApp(from, "Sure 🙂 What's your *name*?");
-      return;
-    }
-
-    // ---------------- AI RESPONSE ----------------
-    const reply = await aiReply(message);
-    await sendWhatsApp(from, reply);
-
-  } catch (err) {
-    console.error("WEBHOOK ERROR:", err.message);
+  if (userState) {
+    await handleBooking(from, message, userState, states);
+    return;
   }
+
+  if (/book|appointment|schedule|reserve/i.test(message)) {
+    states[from] = { step: "name", data: {} };
+    saveState(states);
+    await sendWhatsApp(from, "Sure 🙂 What's your *name*?");
+    return;
+  }
+
+  const reply = await aiReply(message);
+  await sendWhatsApp(from, reply);
 });
 
 // -------------------- BOOKING HANDLER --------------------
@@ -182,7 +166,7 @@ async function handleBooking(from, msg, state, states) {
 }
 
 // -------------------- HEALTH --------------------
-app.get("/", (req, res) => {
+app.get("/", (_, res) => {
   res.send("WhatsApp Bot Running 🚀");
 });
 
