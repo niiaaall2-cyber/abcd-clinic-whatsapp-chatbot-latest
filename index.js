@@ -16,27 +16,21 @@ const STATE_FILE = "./bookingState.json";
 const SYSTEM_PROMPT = fs.readFileSync("./system_prompt.txt", "utf8");
 
 // -------------------- GROQ --------------------
-const Groq = require("groq-sdk");
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 async function aiReply(text) {
   try {
     const completion = await groq.chat.completions.create({
       model: "llama3-8b-8192",
       messages: [
-        {
-          role: "system",
-          content: SYSTEM_PROMPT, // MUST be string
-        },
-        {
-          role: "user",
-          content: text, // MUST be string
-        },
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: text },
       ],
     });
 
     return completion.choices[0].message.content;
-
   } catch (err) {
     console.error("GROQ ERROR FULL:", err);
     return "I'm facing some issues right now. Try again shortly.";
