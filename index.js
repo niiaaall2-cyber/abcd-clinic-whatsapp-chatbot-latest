@@ -114,7 +114,11 @@ app.post("/webhook", async (req, res) => {
     return;
   }
 
-  const reply = await aiReply(message);
+  const userText = typeof message === "string"
+  ? message
+  : JSON.stringify(message);
+
+const reply = await aiReply(userText);
   await sendWhatsApp(from, reply);
 });
 
